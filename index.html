@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌰 GitVuln Watch — Open Source Vulnerability Intelligence</title>
+  <meta name="description" content="AI-powered weekly intelligence brief on open source package vulnerabilities. Monitors npm, pip, go, cargo, nuget, and rubygems ecosystems.">
+  <meta property="og:title" content="GitVuln Watch 🌰">
+  <meta property="og:description" content="AI-powered open source vulnerability intelligence">
+  <meta property="og:type" content="website">
+  <style>
+    /* 🌰 GitVuln Watch Dark Theme */
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-card: #1c2128;
+      --border: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-red: #f85149;
+      --accent-orange: #d29922;
+      --accent-green: #3fb950;
+      --accent-blue: #58a6ff;
+      --accent-purple: #bc8cff;
+      --critical-bg: rgba(248, 81, 73, 0.15);
+      --high-bg: rgba(210, 153, 34, 0.15);
+      --moderate-bg: rgba(63, 185, 80, 0.15);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    /* 🌰 Navigation */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      backdrop-filter: blur(12px);
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 700; color: var(--accent-green);
+    }
+    .nav-brand span { font-size: 14px; color: var(--text-secondary); font-weight: 400; }
+    .nav-links { display: flex; gap: 16px; }
+    .nav-links a {
+      color: var(--text-secondary); text-decoration: none; font-size: 14px;
+      padding: 4px 8px; border-radius: 6px; transition: all 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--text-primary); background: var(--bg-card); }
+    .last-updated {
+      font-size: 12px; color: var(--text-muted);
+      background: var(--bg-card); padding: 4px 10px; border-radius: 12px;
+    }
+
+    /* 🌰 Main layout */
+    main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* 🌰 Stats Hero */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
+    .stat-value { font-size: 32px; font-weight: 800; }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .stat-critical .stat-value { color: var(--accent-red); }
+    .stat-high .stat-value { color: var(--accent-orange); }
+    .stat-total .stat-value { color: var(--accent-blue); }
+    .stat-cvss .stat-value { color: var(--accent-purple); }
+
+    /* 🌰 Section headers */
+    .section-title {
+      font-size: 20px; font-weight: 700; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* 🌰 Risk Level Badge */
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .risk-CRITICAL { background: var(--critical-bg); color: var(--accent-red); border: 1px solid var(--accent-red); }
+    .risk-HIGH { background: var(--high-bg); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+    .risk-MODERATE { background: var(--moderate-bg); color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .risk-LOW { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+
+    /* 🌰 Brief Card */
+    .brief-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; margin-bottom: 24px;
+      border-left: 4px solid var(--accent-green);
+    }
+    .brief-summary { font-size: 16px; margin: 12px 0 20px; color: var(--text-primary); }
+    .brief-section { margin: 16px 0; }
+    .brief-section h3 { font-size: 15px; color: var(--accent-blue); margin-bottom: 8px; }
+    .brief-list { list-style: none; padding: 0; }
+    .brief-list li {
+      padding: 8px 12px; margin: 4px 0; border-radius: 6px;
+      background: var(--bg-secondary); font-size: 14px; color: var(--text-secondary);
+    }
+    .brief-list li::before { content: "→ "; color: var(--accent-green); font-weight: bold; }
+
+    /* 🌰 Key Findings */
+    .finding-card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; margin: 8px 0;
+      border-left: 3px solid var(--accent-orange);
+    }
+    .finding-card.critical { border-left-color: var(--accent-red); }
+    .finding-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .finding-detail { font-size: 13px; color: var(--text-secondary); }
+    .finding-tag {
+      display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+      margin-top: 6px; background: var(--bg-card); color: var(--text-muted);
+    }
+
+    /* 🌰 Ecosystem Risk Grid */
+    .eco-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px; margin: 16px 0;
+    }
+    .eco-card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; text-align: center;
+    }
+    .eco-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .eco-risk { font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .eco-reason { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .eco-risk.HIGH { color: var(--accent-orange); }
+    .eco-risk.MEDIUM { color: var(--accent-blue); }
+    .eco-risk.LOW { color: var(--accent-green); }
+
+    /* 🌰 Tabs */
+    .tabs {
+      display: flex; gap: 4px; margin-bottom: 16px;
+      border-bottom: 1px solid var(--border); padding-bottom: 0;
+    }
+    .tab {
+      padding: 8px 16px; font-size: 13px; cursor: pointer;
+      color: var(--text-secondary); border: none; background: none;
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+    .tab-count {
+      font-size: 11px; background: var(--bg-card); padding: 1px 6px;
+      border-radius: 8px; margin-left: 4px; color: var(--text-muted);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* 🌰 Advisory Feed */
+    .advisory-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; margin: 8px 0;
+      transition: border-color 0.2s; cursor: pointer;
+    }
+    .advisory-card:hover { border-color: var(--accent-blue); }
+    .advisory-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .severity-badge {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .severity-critical { background: var(--critical-bg); color: var(--accent-red); }
+    .severity-high { background: var(--high-bg); color: var(--accent-orange); }
+    .advisory-id { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+    .advisory-eco { font-size: 11px; color: var(--accent-purple); background: rgba(188,140,255,0.12); padding: 2px 8px; border-radius: 10px; }
+    .advisory-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .advisory-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+    .advisory-packages { margin-top: 8px; }
+    .pkg-tag {
+      display: inline-block; font-size: 11px; font-family: monospace;
+      background: var(--bg-secondary); color: var(--text-secondary);
+      padding: 2px 8px; border-radius: 4px; margin: 2px;
+    }
+    .advisory-cvss {
+      font-size: 13px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      background: var(--bg-secondary);
+    }
+
+    /* 🌰 Social Thread */
+    .tweet-card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; margin: 8px 0;
+      font-size: 14px; position: relative;
+    }
+    .tweet-number {
+      position: absolute; top: 8px; right: 12px;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .copy-btn {
+      display: inline-block; margin-top: 8px; padding: 4px 12px;
+      font-size: 12px; background: var(--bg-card); color: var(--accent-blue);
+      border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    }
+    .copy-btn:hover { background: var(--accent-blue); color: var(--bg-primary); }
+
+    /* 🌰 Footer */
+    footer {
+      text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px;
+      border-top: 1px solid var(--border); margin-top: 40px;
+    }
+    footer a { color: var(--accent-blue); text-decoration: none; }
+
+    /* 🌰 Loading */
+    .loading { text-align: center; padding: 48px; color: var(--text-secondary); }
+    .spinner {
+      display: inline-block; width: 32px; height: 32px;
+      border: 3px solid var(--border); border-top-color: var(--accent-green);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 🌰 Responsive */
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .eco-grid { grid-template-columns: repeat(2, 1fr); }
+      nav { flex-direction: column; gap: 8px; }
+      .tabs { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 🌰 Navigation -->
+  <nav>
+    <div class="nav-brand">
+      🛡️ GitVuln Watch <span>🌰 AI-Powered Vulnerability Intelligence</span>
+    </div>
+    <div class="nav-links">
+      <a href="#brief" class="active">Brief</a>
+      <a href="#advisories">Advisories</a>
+      <a href="#social">Social</a>
+    </div>
+    <div class="last-updated" id="lastUpdated">Loading...</div>
+  </nav>
+
+  <main>
+    <!-- 🌰 Stats Hero -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card stat-total"><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total Advisories 🌰</div></div>
+      <div class="stat-card stat-critical"><div class="stat-value" id="statCritical">—</div><div class="stat-label">Critical 🔴</div></div>
+      <div class="stat-card stat-high"><div class="stat-value" id="statHigh">—</div><div class="stat-label">High ⚠️</div></div>
+      <div class="stat-card stat-cvss"><div class="stat-value" id="statCvss">—</div><div class="stat-label">Avg CVSS Score 🌰</div></div>
+      <div class="stat-card"><div class="stat-value" id="statEcosystems" style="color:var(--accent-green)">—</div><div class="stat-label">Ecosystems Monitored</div></div>
+      <div class="stat-card"><div class="stat-value" id="statRisk" style="font-size:16px">—</div><div class="stat-label">Risk Level 🌰</div></div>
+    </div>
+
+    <!-- 🌰 AI Intelligence Brief -->
+    <section id="briefSection">
+      <div class="section-title">🤖 Weekly Intelligence Brief 🌰</div>
+      <div class="brief-card" id="briefCard">
+        <div class="loading"><div class="spinner"></div><p>Loading intelligence brief...</p></div>
+      </div>
+    </section>
+
+    <!-- 🌰 Advisory Feed -->
+    <section id="advisoriesSection" style="margin-top:32px">
+      <div class="section-title">📋 Security Advisories</div>
+      <div class="tabs" id="ecoTabs"></div>
+      <div id="advisoryFeed">
+        <div class="loading"><div class="spinner"></div><p>Loading advisories...</p></div>
+      </div>
+    </section>
+
+    <!-- 🌰 Social Thread -->
+    <section id="socialSection" style="margin-top:32px">
+      <div class="section-title">📱 Social Media Thread 🌰</div>
+      <div id="socialFeed">
+        <div class="loading"><div class="spinner"></div><p>Loading social content...</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    🌰 GitVuln Watch — Built with <a href="https://github.com/1712n/product-kit-template">Product Kit Template</a> 🌰<br>
+    Data from <a href="https://github.com/advisories">GitHub Advisory Database</a> | AI by <a href="https://docs.github.com/en/github-models">GitHub Models</a><br>
+    <span style="margin-top:8px;display:inline-block">🌰🌰🌰</span>
+  </footer>
+
+  <script>
+    // 🌰 GitVuln Watch — Dashboard Controller 🌰
+
+    let eventsData = null
+    let briefData = null
+    let currentFilter = "all"
+
+    // 🌰 Load data
+    async function loadData() {
+      try {
+        const [eventsRes, briefRes] = await Promise.all([
+          fetch("data/events.json").then(r => r.ok ? r.json() : null),
+          fetch("data/brief.json").then(r => r.ok ? r.json() : null).catch(() => null),
+        ])
+        eventsData = eventsRes
+        briefData = briefRes
+        render()
+      } catch (err) {
+        console.error("🌰 Failed to load data:", err)
+        document.getElementById("briefCard").innerHTML = `<p style="color:var(--accent-red)">Failed to load data. Run the data pipeline first.</p>`
+      }
+    }
+
+    // 🌰 Render everything
+    function render() {
+      renderStats()
+      renderBrief()
+      renderTabs()
+      renderAdvisories()
+      renderSocial()
+    }
+
+    // 🌰 Stats
+    function renderStats() {
+      if (!eventsData?.metadata?.stats) return
+      const s = eventsData.metadata.stats
+      document.getElementById("statTotal").textContent = s.total
+      document.getElementById("statCritical").textContent = s.critical
+      document.getElementById("statHigh").textContent = s.high
+      document.getElementById("statCvss").textContent = s.avg_cvss || "—"
+      document.getElementById("statEcosystems").textContent = Object.keys(s.by_ecosystem).length
+      document.getElementById("lastUpdated").textContent = `Updated: ${new Date(s.last_updated).toLocaleDateString()}`
+
+      const riskLevel = briefData?.brief?.risk_level || (s.critical > 5 ? "CRITICAL" : s.critical > 0 ? "HIGH" : "MODERATE")
+      document.getElementById("statRisk").innerHTML = `<span class="risk-badge risk-${riskLevel}">${riskLevel}</span>`
+    }
+
+    // 🌰 Brief
+    function renderBrief() {
+      const card = document.getElementById("briefCard")
+      if (!briefData?.brief) {
+        card.innerHTML = `<p style="color:var(--text-secondary)">🌰 AI brief not yet generated. Run <code>node scripts/ai-analysis.js</code> to generate.</p>`
+        return
+      }
+
+      const b = briefData.brief
+      let html = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <span class="risk-badge risk-${b.risk_level}">${b.risk_level}</span>
+          <span style="font-size:12px;color:var(--text-muted)">${new Date(briefData.generated_at).toLocaleString()}</span>
+        </div>
+        <div class="brief-summary">${b.executive_summary}</div>
+      `
+
+      // 🌰 Key findings
+      if (b.key_findings?.length) {
+        html += `<div class="brief-section"><h3>🔍 Key Findings 🌰</h3>`
+        for (const f of b.key_findings) {
+          html += `<div class="finding-card ${f.severity === 'critical' ? 'critical' : ''}">
+            <div class="finding-title">${f.title}</div>
+            <div class="finding-detail">${f.detail}</div>
+            ${f.affected_ecosystem ? `<span class="finding-tag">${f.affected_ecosystem}</span>` : ''}
+          </div>`
+        }
+        html += `</div>`
+      }
+
+      // 🌰 Trends
+      if (b.trends?.length) {
+        html += `<div class="brief-section"><h3>📈 Trends 🌰</h3><ul class="brief-list">`
+        for (const t of b.trends) html += `<li>${t}</li>`
+        html += `</ul></div>`
+      }
+
+      // 🌰 Recommendations
+      if (b.recommendations?.length) {
+        html += `<div class="brief-section"><h3>✅ Recommendations 🌰</h3><ul class="brief-list">`
+        for (const r of b.recommendations) html += `<li>${r}</li>`
+        html += `</ul></div>`
+      }
+
+      // 🌰 Ecosystem risk
+      if (b.ecosystem_risk) {
+        html += `<div class="brief-section"><h3>🌐 Ecosystem Risk Assessment 🌰</h3><div class="eco-grid">`
+        for (const [eco, info] of Object.entries(b.ecosystem_risk)) {
+          html += `<div class="eco-card">
+            <div class="eco-name">${eco}</div>
+            <div class="eco-risk ${info.risk}">${info.risk}</div>
+            <div class="eco-reason">${info.reason}</div>
+          </div>`
+        }
+        html += `</div></div>`
+      }
+
+      card.innerHTML = html
+    }
+
+    // 🌰 Tabs
+    function renderTabs() {
+      if (!eventsData?.advisories) return
+      const ecosystems = {}
+      for (const a of eventsData.advisories) {
+        ecosystems[a.ecosystem] = (ecosystems[a.ecosystem] || 0) + 1
+      }
+
+      const tabs = document.getElementById("ecoTabs")
+      let html = `<button class="tab active" onclick="filterAdvisories('all')">All <span class="tab-count">${eventsData.advisories.length}</span></button>`
+      for (const [eco, count] of Object.entries(ecosystems).sort((a, b) => b[1] - a[1])) {
+        html += `<button class="tab" onclick="filterAdvisories('${eco}')">${eco} <span class="tab-count">${count}</span></button>`
+      }
+      tabs.innerHTML = html
+    }
+
+    // 🌰 Filter
+    window.filterAdvisories = function(eco) {
+      currentFilter = eco
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"))
+      event.target.closest(".tab").classList.add("active")
+      renderAdvisories()
+    }
+
+    // 🌰 Advisories
+    function renderAdvisories() {
+      if (!eventsData?.advisories) return
+      const feed = document.getElementById("advisoryFeed")
+      const filtered = currentFilter === "all"
+        ? eventsData.advisories
+        : eventsData.advisories.filter(a => a.ecosystem === currentFilter)
+
+      const display = filtered.slice(0, 50)
+      let html = ""
+
+      for (const a of display) {
+        const date = new Date(a.published_at).toLocaleDateString()
+        const pkgs = a.packages.map(p => `<span class="pkg-tag">${p.name || 'unknown'}</span>`).join("")
+        const cvss = a.cvss_score ? `<span class="advisory-cvss" style="color:${a.cvss_score >= 9 ? 'var(--accent-red)' : a.cvss_score >= 7 ? 'var(--accent-orange)' : 'var(--accent-green)'}">${a.cvss_score}</span>` : ""
+
+        html += `<div class="advisory-card" onclick="window.open('${a.url}','_blank')">
+          <div class="advisory-header">
+            <span class="severity-badge severity-${a.severity}">${a.severity}</span>
+            <span class="advisory-id">${a.id}</span>
+            <span class="advisory-eco">${a.ecosystem}</span>
+            ${cvss}
+            <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">${date}</span>
+          </div>
+          <div class="advisory-title">${a.summary}</div>
+          ${pkgs ? `<div class="advisory-packages">${pkgs}</div>` : ""}
+        </div>`
+      }
+
+      if (filtered.length > 50) {
+        html += `<p style="text-align:center;color:var(--text-muted);padding:16px">Showing 50 of ${filtered.length} advisories</p>`
+      }
+
+      feed.innerHTML = html || `<p style="color:var(--text-secondary)">No advisories found for this filter.</p>`
+    }
+
+    // 🌰 Social
+    function renderSocial() {
+      const feed = document.getElementById("socialFeed")
+      if (!briefData?.social_thread?.length) {
+        feed.innerHTML = `<p style="color:var(--text-secondary)">🌰 Social thread not yet generated.</p>`
+        return
+      }
+
+      let html = ""
+      briefData.social_thread.forEach((tweet, i) => {
+        html += `<div class="tweet-card">
+          <span class="tweet-number">${i + 1}/${briefData.social_thread.length}</span>
+          <div>${tweet}</div>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('${tweet.replace(/'/g, "\\'")}');this.textContent='Copied! 🌰'">📋 Copy</button>
+        </div>`
+      })
+
+      const shareUrl = encodeURIComponent(briefData.social_thread[0])
+      html += `<div style="margin-top:16px;display:flex;gap:8px">
+        <a href="https://twitter.com/intent/tweet?text=${shareUrl}" target="_blank" class="copy-btn" style="text-decoration:none">Share on X/Twitter</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}" target="_blank" class="copy-btn" style="text-decoration:none">Share on LinkedIn</a>
+      </div>`
+
+      feed.innerHTML = html
+    }
+
+    // 🌰 Init
+    loadData()
+  </script>
+</body>
+</html>
