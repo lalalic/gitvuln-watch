@@ -40,9 +40,10 @@ jobs:
       # 🌰 Generate AI intelligence brief using GitHub Models
       - name: AI analysis 🌰
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: node scripts/ai-analysis.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.MODELS_TOKEN }}
 
       # 🌰 Commit updated data
       - name: Commit changes 🌰

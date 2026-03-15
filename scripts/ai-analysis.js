@@ -9,7 +9,8 @@ const MODEL = "gpt-4o-mini"
 
 if (!GITHUB_TOKEN) {
   console.error("🌰 Error: GITHUB_TOKEN is required for AI analysis")
-  process.exit(1)
+  console.log("🌰 Skipping AI analysis — set GITHUB_TOKEN with models permission")
+  process.exit(0)
 }
 
 /**
