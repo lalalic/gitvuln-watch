@@ -2,7 +2,7 @@
   "metadata": {
     "product": "GitVuln Watch 🌰",
     "description": "AI-powered open source vulnerability intelligence",
-    "generated_at": "2026-03-15T00:26:39.627Z",
+    "generated_at": "2026-03-15T00:29:42.252Z",
     "stats": {
       "total": 111,
       "critical": 32,
@@ -15,7 +15,7 @@
         "rubygems": 1
       },
       "avg_cvss": 8.2,
-      "last_updated": "2026-03-15T00:26:39.624Z"
+      "last_updated": "2026-03-15T00:29:42.252Z"
     }
   },
   "advisories": [
